@@ -6,11 +6,9 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
-use PhpOffice\PhpWord;
 use PhpOffice\PhpWord\Exception\Exception;
-use PhpOffice\PhpWord\IOFactory;
-use PhpOffice\PhpWord\PhpWord as PhpWordPhpWord;
 use PhpOffice\PhpWord\TemplateProcessor;
+use PhpOffice\PhpWord\Writer\PDF;
 
 class Controller extends BaseController
 {
@@ -22,6 +20,8 @@ class Controller extends BaseController
     public function rellenarDatosSinBloques()
     {
         try {
+            $rutaOriginal = 'prueba';
+            $rutaDestino = 'prueba1';
             // Cambiar formato de doc a docx --> NO FUNCIONA
             // $phpWord = new PhpWordPhpWord();
             // $document = $phpWord->loadTemplate('anexo0.doc');
@@ -30,7 +30,7 @@ class Controller extends BaseController
 
             // Se crea el objeto template con la ruta del archivo que se va a manipular
             // La ruta comienza en la carpeta public
-            $template = new TemplateProcessor('prueba.docx');
+            $template = new TemplateProcessor($rutaOriginal . '.docx');
 
             /*****************************************************************************************/
             /*******************ESTABLECER VALORES DE FORMA INDIVIDUAL EN EL DOCUMENTO****************/
@@ -60,7 +60,8 @@ class Controller extends BaseController
             $template->setValues($datos);
 
             // Guardar el documento
-            $template->saveAs('prueba1.docx');
+            $template->saveAs($rutaDestino . '.docx');
+            $this->convertirWordPDF($rutaDestino);
         } catch (Exception $e) {
         }
     }
@@ -76,6 +77,37 @@ class Controller extends BaseController
             $template->saveAs('bloques1.docx');
         } catch (Exception $e) {
 
+        }
+    }
+
+    /**
+     * Esta función convierte un archivo word en pdf
+     */
+    private function convertirWordPDF(String $rutaArchivo)
+    {
+        /* Set the PDF Engine Renderer Path */
+        $domPdfPath = base_path('vendor/dompdf/dompdf');
+        \PhpOffice\PhpWord\Settings::setPdfRendererPath($domPdfPath);
+        \PhpOffice\PhpWord\Settings::setPdfRendererName('DomPDF');
+
+        // Load temporarily create word file
+        $Content = \PhpOffice\PhpWord\IOFactory::load($rutaArchivo . '.docx');
+
+        //Save it into PDF
+        $savePdfPath = public_path($rutaArchivo. '.pdf');
+
+        /*@ If already PDF exists then delete it */
+        if ( file_exists($savePdfPath) ) {
+            unlink($savePdfPath);
+        }
+
+        //Save it into PDF
+        $PDFWriter = \PhpOffice\PhpWord\IOFactory::createWriter($Content,'PDF');
+        $PDFWriter->save($savePdfPath);
+
+        /*@ Remove temporarily created word file */
+        if ( file_exists($rutaArchivo . '.docx') ) {
+            unlink($rutaArchivo . '.docx');
         }
     }
 }
